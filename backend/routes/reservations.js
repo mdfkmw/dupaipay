@@ -220,7 +220,8 @@ async function logEvent(reservationId, action, actorId, details = null) {
     const channel = details?.channel || null;
     const amount = details?.amount || null;
     const payment_method = details?.method || null;
-    const transaction_id = details?.transaction_id || null;
+    const provider_transaction_id = details?.provider_transaction_id || null;
+
     const related_id = details?.from_reservation_id || details?.related_reservation_id || null;
     const note = details?.note || null;
     const serialize = (payload) => {
@@ -249,7 +250,7 @@ async function logEvent(reservationId, action, actorId, details = null) {
       `
       INSERT INTO audit_logs
         (created_at, actor_id, entity, entity_id, action, related_entity, related_id,
-         correlation_id, channel, amount, payment_method, transaction_id, note, before_json, after_json)
+         correlation_id, channel, amount, payment_method, provider_transaction_id, note, before_json, after_json)
       VALUES (NOW(), ?, ?, ?, ?, 'reservation', ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
@@ -262,7 +263,7 @@ async function logEvent(reservationId, action, actorId, details = null) {
         channel,
         amount,
         payment_method,
-        transaction_id,
+        provider_transaction_id,
         note,
         before_json,
         after_json
@@ -1040,14 +1041,14 @@ router.post('/', async (req, res) => {
 
         // 3.6) Plată (opțional) – DOAR CARD aici.
         // CASH se face ulterior prin POST /api/reservations/:id/payments/cash (tipărește și marchează paid)
-        if (p.payment_method === 'card' && p.transaction_id) {
+        if (p.payment_method === 'card' && p.provider_transaction_id) {
           await db.query(
             `
             INSERT INTO payments
-              (reservation_id, amount, status, payment_method, transaction_id, timestamp)
+              (reservation_id, amount, status, payment_method, provider_transaction_id, timestamp)
             VALUES (?, ?, 'paid', 'card', ?, NOW())
             `,
-            [newResId, netPrice, p.transaction_id]
+            [newResId, netPrice, p.provider_transaction_id]
           );
           await logEvent(newResId, 'pay', Number(req.user?.id) || null, { method: 'card', amount: netPrice });
         }
@@ -1346,7 +1347,7 @@ router.post('/:id/payments/cash-agent', async (req, res) => {
     // 2) INSERT în payments: pending, cash, fără bon deocamdată
     const payIns = await db.query(
       `INSERT INTO payments
-         (reservation_id, amount, status, payment_method, transaction_id, timestamp, collected_by, receipt_status)
+         (reservation_id, amount, status, payment_method, provider_transaction_id, timestamp, collected_by, receipt_status)
        VALUES (?, ?, 'pending', 'cash', NULL, NOW(), ?, 'none')`,
       [reservationId, amount, employeeId]
     );
@@ -1445,7 +1446,7 @@ router.post('/:id/payments/card-agent', async (req, res) => {
     // 3) INSERT în payments: pending, card, fără bon deocamdată
     const payIns = await db.query(
       `INSERT INTO payments
-         (reservation_id, amount, status, payment_method, transaction_id, timestamp, collected_by, receipt_status)
+         (reservation_id, amount, status, payment_method, provider_transaction_id, timestamp, collected_by, receipt_status)
        VALUES (?, ?, 'pending', 'card', NULL, NOW(), ?, 'none')`,
       [reservationId, amount, employeeId]
     );
@@ -1629,7 +1630,7 @@ router.post('/:id/payments/confirm', async (req, res) => {
     }
 
     await db.query(
-      `INSERT INTO payments (reservation_id, amount, status, payment_method, transaction_id, timestamp, collected_by)
+      `INSERT INTO payments (reservation_id, amount, status, payment_method, provider_transaction_id, timestamp, collected_by)
        VALUES (?, ?, 'paid', ?, ?, NOW(), ?)`,
       [reservationId, amount, paymentMethod, transactionId, employeeId]
     );
@@ -2200,7 +2201,7 @@ router.get('/:id/payments/status', requireAuth, async (req, res) => {
         payments.status       AS status,
         payments.receipt_status AS receipt_status,
         payments.payment_method,
-        payments.transaction_id,
+        payments.provider_transaction_id,
         DATE_FORMAT(payments.timestamp, '%d.%m.%Y %H:%i:%s') AS ts,
         payments.collected_by
       FROM payments
@@ -2305,7 +2306,7 @@ SELECT
   payments.amount,
   payments.status,
   payments.payment_method,
-  payments.transaction_id,
+  payments.provider_transaction_id,
   DATE_FORMAT(payments.timestamp, '%d.%m.%Y %H:%i') AS ts,
   payments.collected_by,
   e.name AS collected_by_name
@@ -2333,7 +2334,7 @@ ORDER BY payments.id DESC
     audit_logs.channel,
     audit_logs.amount,
     audit_logs.payment_method,
-    audit_logs.transaction_id
+    audit_logs.provider_transaction_id
   FROM audit_logs
   LEFT JOIN employees e ON e.id = audit_logs.actor_id
   WHERE

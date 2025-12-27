@@ -27,7 +27,7 @@ async function writeAudit({
   try {
     await db.query(
       `INSERT INTO audit_logs
-        (created_at, actor_id, entity, entity_id, action, related_entity, related_id, correlation_id, channel, amount, payment_method, transaction_id, note, before_json, after_json)
+        (created_at, actor_id, entity, entity_id, action, related_entity, related_id, correlation_id, channel, amount, payment_method, provider_transaction_id, note, before_json, after_json)
        VALUES (NOW(), ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL, ?, ?, ?)` ,
       [
         actorId || null,
@@ -156,7 +156,7 @@ router.get('/audit-logs', ensureAdmin, async (req, res) => {
         al.channel,
         al.amount,
         al.payment_method,
-        al.transaction_id,
+        al.provider_transaction_id,
         al.note,
         al.before_json,
         al.after_json,

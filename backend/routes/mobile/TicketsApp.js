@@ -410,7 +410,7 @@ router.post(
           const payRes = await db.query(
             `
             INSERT INTO payments
-              (reservation_id, amount, status, payment_method, transaction_id, timestamp, collected_by)
+              (reservation_id, amount, status, payment_method, provider_transaction_id, timestamp, collected_by)
             VALUES (?, ?, 'paid', ?, NULL, ?, ?)
             `,
             [

@@ -17,14 +17,14 @@ async function logPersonEvent(personId, action, actorId, details = {}) {
     const channel = details?.channel || (['admin','operator_admin','agent','driver'].includes(details?.role) ? 'agent' : null);
     const related_entity = details?.related_entity || null;
     const related_id = details?.related_id || null;
-    const amount = null, payment_method = null, transaction_id = null;
+    const amount = null, payment_method = null, provider_transaction_id = null;
     const note = details?.note || null;
     await db.query(`
       INSERT INTO audit_logs
         (created_at, actor_id, entity, entity_id, action, related_entity, related_id,
-         correlation_id, channel, amount, payment_method, transaction_id, note, before_json, after_json)
+         correlation_id, channel, amount, payment_method, provider_transaction_id, note, before_json, after_json)
       VALUES (NOW(), ?, 'person', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)
-    `, [Number(actorId) || null, Number(personId) || null, action, related_entity, related_id, correlation_id, channel, amount, payment_method, transaction_id, note]);
+    `, [Number(actorId) || null, Number(personId) || null, action, related_entity, related_id, correlation_id, channel, amount, payment_method, provider_transaction_id, note]);
   } catch (e) {
     console.warn('[audit person] failed', e.message);
   }

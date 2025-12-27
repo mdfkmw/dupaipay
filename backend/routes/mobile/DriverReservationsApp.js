@@ -20,7 +20,7 @@ async function logEvent(reservationId, action, actorId, details = null) {
     const channel = details?.channel || 'agent'; // șoferul e tratat ca 'agent'
     const amount = details?.amount || null;
     const payment_method = details?.method || null;
-    const transaction_id = details?.transaction_id || null;
+    const provider_transaction_id = details?.provider_transaction_id || null;
     const related_id = details?.from_reservation_id || details?.related_reservation_id || null;
     const note = details?.note || null;
 
@@ -50,7 +50,7 @@ async function logEvent(reservationId, action, actorId, details = null) {
       `
       INSERT INTO audit_logs
         (created_at, actor_id, entity, entity_id, action, related_entity, related_id,
-         correlation_id, channel, amount, payment_method, transaction_id, note, before_json, after_json)
+         correlation_id, channel, amount, payment_method, provider_transaction_id, note, before_json, after_json)
       VALUES (NOW(), ?, ?, ?, ?, 'reservation', ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
@@ -63,7 +63,7 @@ async function logEvent(reservationId, action, actorId, details = null) {
         channel,
         amount,
         payment_method,
-        transaction_id,
+        provider_transaction_id,
         note,
         before_json,
         after_json,
