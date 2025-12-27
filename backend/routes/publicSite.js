@@ -2269,7 +2269,7 @@ router.post('/orders/:orderId/start-payment', async (req, res) => {
     // Salvam un payment pending legat de order (daca exista deja, il actualizam)
     const { rows: existingPay } = await execQuery(
       conn,
-      `SELECT id FROM payments WHERE order_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1`,
+      `SELECT id FROM payments_public_orders WHERE order_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1`,
       [orderId],
     );
 
@@ -2277,7 +2277,7 @@ router.post('/orders/:orderId/start-payment', async (req, res) => {
       await execQuery(
         conn,
         `
-        UPDATE payments
+        UPDATE payments_public_orders
            SET amount = ?,
                payment_method = 'card',
                provider = 'ipay',
@@ -2291,7 +2291,7 @@ router.post('/orders/:orderId/start-payment', async (req, res) => {
       await execQuery(
         conn,
         `
-        INSERT INTO payments
+        INSERT INTO payments_public_orders
           (order_id, amount, status, payment_method, provider, provider_payment_id, provider_order_number, timestamp)
         VALUES (?, ?, 'pending', 'card', 'ipay', ?, ?, NOW())
         `,
@@ -2348,7 +2348,7 @@ router.get('/ipay/return', async (req, res) => {
     // Citim ultima plata pending pentru order ca sa luam provider_payment_id (ipay orderId)
     const { rows: payRows } = await execQuery(
       conn,
-      `SELECT id, provider_payment_id FROM payments WHERE order_id = ? ORDER BY id DESC LIMIT 1`,
+      `SELECT id, provider_payment_id FROM payments_public_orders WHERE order_id = ? ORDER BY id DESC LIMIT 1`,
       [orderId],
     );
     const ipayOrderId = payRows?.length ? String(payRows[0].provider_payment_id || '') : '';
@@ -2370,7 +2370,7 @@ router.get('/ipay/return', async (req, res) => {
     if (!isPaid) {
       await execQuery(conn, `UPDATE orders SET status = 'failed' WHERE id = ? AND status = 'pending'`, [orderId]);
       if (payRows?.length) {
-        await execQuery(conn, `UPDATE payments SET status = 'failed' WHERE id = ?`, [payRows[0].id]);
+        await execQuery(conn, `UPDATE payments_public_orders SET status = 'failed' WHERE id = ?`, [payRows[0].id]);
       }
       await conn.commit();
       conn.release();
@@ -2543,7 +2543,7 @@ router.get('/ipay/return', async (req, res) => {
 
     // Marcheaza plata initiala (pending) ca paid
     if (payRows?.length) {
-      await execQuery(conn, `UPDATE payments SET status = 'paid' WHERE id = ?`, [payRows[0].id]);
+      await execQuery(conn, `UPDATE payments_public_orders SET status = 'paid' WHERE id = ?`, [payRows[0].id]);
     }
 
     // Curata intent-urile legate de order (nu mai avem nevoie de hold)
