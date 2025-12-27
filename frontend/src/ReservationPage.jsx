@@ -1099,17 +1099,16 @@ useEffect(() => {
 
     const selectedSeatIds = new Set(selectedSeats.map((seat) => seat.id));
     const textWidthLimit = seatWidth - seatPadding * 2;
-    const iconColumnWidth = 18;
 
-    const clampText = (value, font, maxWidth = textWidthLimit) => {
+    const clampText = (value, font) => {
       if (!value) return '';
       const ellipsis = '…';
       ctx.font = font;
-      if (ctx.measureText(value).width <= maxWidth) {
+      if (ctx.measureText(value).width <= textWidthLimit) {
         return value;
       }
       let truncated = value;
-      while (truncated.length > 1 && ctx.measureText(truncated + ellipsis).width > maxWidth) {
+      while (truncated.length > 1 && ctx.measureText(truncated + ellipsis).width > textWidthLimit) {
         truncated = truncated.slice(0, -1);
       }
       return `${truncated}${ellipsis}`;
@@ -1186,6 +1185,7 @@ useEffect(() => {
       }
 
       const activePassengers = (seat.passengers || []).filter((p) => !p.status || p.status === 'active');
+      const primaryPassenger = activePassengers[0];
       const seatDisplayLabel = isDriverSeat && driverName ? driverName : seat.label;
       const driverSubtitle = isDriverSeat && driverName ? 'Șofer' : null;
       let textY = y + seatPadding;
@@ -1199,80 +1199,56 @@ useEffect(() => {
         textY += baseSeatTextSize + 4;
       };
 
+      const writeObservation = (text) => {
+        if (!showSeatObservations || !text) return;
+        const lines = String(text).split(/\r?\n/);
+        lines.forEach((line, idx) => {
+          const prefix = idx === 0 ? '📝 ' : '   ';
+          writeLine(`${prefix}${line}`, smallFont);
+        });
+      };
+
       writeLine(seatDisplayLabel, nameFontPrimary);
       if (driverSubtitle) {
         writeLine(driverSubtitle, nameFontSecondary);
       }
 
-      if (activePassengers.length > 0) {
-        const badgeLabel = `${activePassengers.length} pas.`;
+      if (primaryPassenger) {
+        writeLine(primaryPassenger.name || '(fără nume)', nameFontSecondary);
+        writeLine(primaryPassenger.phone, lineFont);
+        writeLine(`${primaryPassenger.board_at} → ${primaryPassenger.exit_at}`, lineFont);
+        writeObservation(primaryPassenger.observations);
+      }
+
+      if (activePassengers.length > 1) {
+        textY += 4;
+        activePassengers.slice(1).forEach((passenger) => {
+          writeLine(passenger.name, nameFontSecondary);
+          writeLine(passenger.phone, lineFont);
+          writeObservation(passenger.observations);
+        });
+      }
+
+
+      const paidPassenger = activePassengers.find((p) => p?.payment_status === 'paid');
+      const paymentMethod = paidPassenger?.payment_method || primaryPassenger?.payment_method;
+      if (paymentMethod) {
+        const methodLabel = paymentMethod === 'cash' ? '💵 Cash' : paymentMethod === 'card' ? '💳 Card' : '📝 Rezervare';
         ctx.font = '600 11px "Inter", sans-serif';
-        const badgeWidth = ctx.measureText(badgeLabel).width + 16;
+        const badgeWidth = ctx.measureText(methodLabel).width + 16;
         const badgeHeight = 20;
         const badgeX = x + seatWidth - badgeWidth - seatPadding;
-        const badgeY = y + seatPadding - 2;
+        const badgeY = y + seatHeight - badgeHeight - seatPadding;
+        const badgeColor = paymentMethod === 'cash' ? '#eab308' : paymentMethod === 'card' ? '#7c3aed' : '#6b7280';
         drawRoundedRect(ctx, badgeX, badgeY, badgeWidth, badgeHeight, 10);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.fillStyle = badgeColor;
         ctx.fill();
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(badgeLabel, badgeX + badgeWidth / 2, badgeY + badgeHeight / 2 + 1);
+        ctx.fillText(methodLabel, badgeX + badgeWidth / 2, badgeY + badgeHeight / 2 + 1);
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-      }
-
-      const getPassengerIcon = (passenger) => {
-        if (passenger?.payment_status === 'paid') {
-          if (passenger?.payment_method === 'cash') return '💵';
-          if (passenger?.payment_method === 'card' && passenger?.booking_channel === 'online') return '🌐';
-          if (passenger?.payment_method === 'card') return '💳';
-          return '💳';
-        }
-        return '📎';
-      };
-
-      if (activePassengers.length > 0) {
-        textY += 2;
-        const infoMaxWidth = seatWidth - seatPadding * 2 - iconColumnWidth;
-        activePassengers.forEach((passenger) => {
-          const icon = getPassengerIcon(passenger);
-          ctx.font = `600 ${baseSeatTextSize + 2}px "Inter", sans-serif`;
-          ctx.fillStyle = seatTextColor;
-          ctx.textAlign = 'left';
-          ctx.fillText(icon, x + seatPadding, textY);
-
-          ctx.textAlign = 'right';
-          const nameText = clampText(passenger.name || '(fără nume)', nameFontSecondary, infoMaxWidth);
-          ctx.font = nameFontSecondary;
-          ctx.fillText(nameText, x + seatWidth - seatPadding, textY);
-          textY += baseSeatTextSize + 4;
-
-          ctx.font = lineFont;
-          const phoneText = clampText(passenger.phone || '', lineFont, infoMaxWidth);
-          if (phoneText) {
-            ctx.fillText(phoneText, x + seatWidth - seatPadding, textY);
-            textY += baseSeatTextSize + 4;
-          }
-
-          const segmentText = clampText(`${passenger.board_at} → ${passenger.exit_at}`, lineFont, infoMaxWidth);
-          ctx.fillText(segmentText, x + seatWidth - seatPadding, textY);
-          textY += baseSeatTextSize + 4;
-
-          if (showSeatObservations && passenger.observations) {
-            const observationLines = String(passenger.observations).split(/\r?\n/);
-            observationLines.forEach((line, idx) => {
-              const prefix = idx === 0 ? '📝 ' : '   ';
-              ctx.font = smallFont;
-              const observationText = clampText(`${prefix}${line}`, smallFont, infoMaxWidth);
-              ctx.fillText(observationText, x + seatWidth - seatPadding, textY);
-              textY += Math.max(baseSeatTextSize - 1, 8) + 4;
-            });
-          }
-
-          textY += 2;
-        });
-        ctx.textAlign = 'left';
       }
 
       if (heldByOther) {
@@ -6044,3 +6020,4 @@ useEffect(() => {
     </div>
   );
 }
+
