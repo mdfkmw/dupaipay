@@ -130,14 +130,22 @@ const SeatMap = forwardRef(function SeatMap({
 
 
         const getPassengerIcon = (p) => {
-  if (p?.payment_status === 'paid') {
-    if (p?.payment_method === 'cash') return '💵';
-    if (p?.payment_method === 'card' && p?.booking_channel === 'online') return '🌐';
-    if (p?.payment_method === 'card') return '💳';
-    return '💳';
-  }
-  return '📎';
-};
+          if (p?.payment_status === 'paid') {
+            if (p?.payment_method === 'cash') return '💵';
+            if (p?.payment_method === 'card' && p?.booking_channel === 'online') return '🌐';
+            if (p?.payment_method === 'card') return '💳';
+            return '💳';
+          }
+          return '📎';
+        };
+
+        const formatAmountLabel = (amount) => {
+          if (amount == null || amount === '') return '';
+          const numericAmount = typeof amount === 'number' ? amount : Number.parseFloat(amount);
+          if (Number.isNaN(numericAmount)) return '';
+          const value = numericAmount % 1 === 0 ? numericAmount.toFixed(0) : numericAmount.toFixed(2);
+          return `${value} lei`;
+        };
 
 
 
@@ -200,8 +208,8 @@ const SeatMap = forwardRef(function SeatMap({
             <div className="flex justify-between items-start font-semibold text-[13px] leading-tight mb-1">
               <span className="truncate">{seatTitle}</span>
               {activePassengers.length > 0 && (
-                <span className="text-[11px] px-2 py-1 rounded bg-white/20 text-right">
-                  {activePassengers.length} pas.
+                <span className="text-[12px] text-right truncate" style={passengerNameStyle}>
+                  {activePassengers[0]?.name || '(fără nume)'}
                 </span>
               )}
             </div>
@@ -213,27 +221,32 @@ const SeatMap = forwardRef(function SeatMap({
             )}
 
             {activePassengers.length > 0 && (
-              <div className="flex flex-col items-end text-right gap-1 text-[11px] leading-tight">
-                {activePassengers.map((p, i) => (
+              <div className="flex flex-col items-end text-right text-[11px] leading-tight">
+                {activePassengers.map((p, i) => {
+                  const amountValue =
+                    p?.payment_status === 'paid'
+                      ? (p?.paid_amount ?? p?.price_value)
+                      : p?.price_value;
+                  const amountLabel = formatAmountLabel(amountValue);
+                  const paymentLabel = [getPassengerIcon(p), amountLabel].filter(Boolean).join(' ');
+                  return (
                   <div key={i} className="w-full">
-<div className="flex items-start justify-between gap-2">
-  <div className="w-5 text-left text-base leading-none">
-    {getPassengerIcon(p)}
-  </div>
-
-  <div
-    className="font-semibold text-[12px] leading-tight truncate flex-1 text-right"
-    style={passengerNameStyle}
-  >
-    {p.name || '(fără nume)'}
-  </div>
-</div>
-
-                    <div style={passengerLineStyle}>
-                      {p.phone}
-                    </div>
-                    <div className="italic" style={passengerLineStyle}>
-                      {p.board_at} → {p.exit_at}
+                    {i !== 0 && (
+                      <div
+                        className="font-semibold text-[12px] leading-tight truncate text-right"
+                        style={passengerNameStyle}
+                      >
+                        {p.name || '(fără nume)'}
+                      </div>
+                    )}
+                    {p.phone && <div style={passengerLineStyle}>{p.phone}</div>}
+                    <div className="flex items-center justify-between gap-2" style={passengerLineStyle}>
+                      <span className="text-left text-base leading-none whitespace-nowrap">
+                        {paymentLabel}
+                      </span>
+                      <span className="italic text-right flex-1">
+                        {p.board_at} → {p.exit_at}
+                      </span>
                     </div>
                     {showObservations && p.observations && (
                       <div
@@ -244,7 +257,8 @@ const SeatMap = forwardRef(function SeatMap({
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
