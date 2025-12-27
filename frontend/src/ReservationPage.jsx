@@ -2104,7 +2104,7 @@ useEffect(() => {
   const handleTransactionChange = (seatId, value) => {
     setPassengers((prev) =>
       prev.map((p) =>
-        p.seat_id === seatId ? { ...p, transaction_id: value } : p
+        p.seat_id === seatId ? { ...p, provider_transaction_id: value } : p
       )
     );
   };
@@ -3570,7 +3570,7 @@ useEffect(() => {
             discount_type_id: d.discount_type_id || null,
             price: pricePerSeat[seat.id],
             payment_method: d.payment_method || 'none',
-            transaction_id: d.transaction_id || null,
+            provider_transaction_id: d.provider_transaction_id || null,
           };
 
           if (d?.reservation_id) {

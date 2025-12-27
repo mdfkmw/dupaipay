@@ -74,7 +74,7 @@ function AuditMini({ reservationId, fallbackEvent }) {
                     ) : null;
                     const payText = pay ? (
                       <span>
-                        {move ? ' · ' : ''}<b>Plată</b>: {pay.amount ?? '—'} {pay.payment_method ? `(${pay.payment_method})` : ''}{pay.transaction_id ? `, txn ${pay.transaction_id}` : ''}{pay.at ? `, la ${pay.at}` : ''}
+                        {move ? ' · ' : ''}<b>Plată</b>: {pay.amount ?? '—'} {pay.payment_method ? `(${pay.payment_method})` : ''}{pay.provider_transaction_id ? `, txn ${pay.provider_transaction_id}` : ''}{pay.at ? `, la ${pay.at}` : ''}
                       </span>
                     ) : null;
                     return (moveText || payText) ? <div>{moveText}{payText}</div> : null;

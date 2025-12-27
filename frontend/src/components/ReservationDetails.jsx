@@ -55,7 +55,7 @@ export default function ReservationDetails() {
               <ul className="list-disc pl-5">
                 {payments.map(pay => (
                   <li key={pay.id}>
-                    {pay.ts}: {pay.amount} RON — {pay.payment_method} {pay.transaction_id ? `(txn ${pay.transaction_id})` : ''}{pay.collected_by ? ` | casier ${pay.collected_by_name || pay.collected_by}` : ''}{pay.status === 'paid' && (r.created_by_name || r.created_by) ? ` | Creat de: ${r.created_by_name || r.created_by}` : ''}
+                    {pay.ts}: {pay.amount} RON — {pay.payment_method} {pay.provider_transaction_id ? `(txn ${pay.provider_transaction_id})` : ''}{pay.collected_by ? ` | casier ${pay.collected_by_name || pay.collected_by}` : ''}{pay.status === 'paid' && (r.created_by_name || r.created_by) ? ` | Creat de: ${r.created_by_name || r.created_by}` : ''}
                   </li>
                 ))}
               </ul>
