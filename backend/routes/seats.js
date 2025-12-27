@@ -203,7 +203,6 @@ router.get('/', async (req, res) => {
            r.observations,
            r.status,
            rp.booking_channel AS booking_channel,
-           rp.price_value AS price_value,
 
            /* dacă există minim o plată PAID => 'paid' */
            (
@@ -211,13 +210,6 @@ router.get('/', async (req, res) => {
              FROM payments p2
              WHERE p2.reservation_id = r.id
            ) AS payment_status,
-           /* suma totală plătită (doar plăți confirmate) */
-           (
-             SELECT COALESCE(SUM(p2.amount), 0)
-             FROM payments p2
-             WHERE p2.reservation_id = r.id
-               AND p2.status = 'paid'
-           ) AS paid_amount,
            /* metoda ultimei plăți PAID (cash/card) */
            (
              SELECT p3.payment_method
@@ -257,8 +249,6 @@ router.get('/', async (req, res) => {
           payment_status: r.payment_status || null,
           payment_method: r.payment_method || null,
           booking_channel: r.booking_channel || null,
-          paid_amount: r.paid_amount ?? null,
-          price_value: r.price_value ?? null,
 
         }));
 
