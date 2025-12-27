@@ -1052,8 +1052,8 @@ useEffect(() => {
       return null;
     }
 
-    const seatWidth = isWideView ? wideSeatSize.width : 105;
-    const seatHeight = isWideView ? wideSeatSize.height : 100;
+    const seatWidth = isWideView ? wideSeatSize.width : 150;
+    const seatHeight = isWideView ? wideSeatSize.height : 130;
     const baseSeatTextSize = Number(isWideView ? seatTextSizeWide : seatTextSizeNarrow) || 11;
     const seatTextColor = (isWideView ? seatTextColorWide : seatTextColorNarrow) || '#ffffff';
 
@@ -1061,11 +1061,13 @@ useEffect(() => {
     const nameFontSecondary = `600 ${baseSeatTextSize + 1}px "Inter", sans-serif`;
     const lineFont = `${baseSeatTextSize}px "Inter", sans-serif`;
     const smallFont = `italic ${Math.max(baseSeatTextSize - 1, 8)}px "Inter", sans-serif`;
+    const seatLabelFont = `800 ${Math.round(seatHeight * 0.55)}px "Inter", sans-serif`;
+    const paymentIconFont = `16px "Inter", sans-serif`;
 
 
     const seatGap = 5;
-    const padding = 24;
-    const seatPadding = 10;
+    const padding = 16;
+    const seatPadding = 12;
     const maxCol = Math.max(...seats.map((s) => s.seat_col || 1));
     const maxRow = Math.max(...seats.map((s) => s.row || 0));
     const dateLabel = selectedDate ? format(selectedDate, 'dd.MM.yyyy') : '';
@@ -1112,6 +1114,23 @@ useEffect(() => {
         truncated = truncated.slice(0, -1);
       }
       return `${truncated}${ellipsis}`;
+    };
+
+    const getPaymentIcon = (p) => {
+      if (p?.payment_status === 'paid') {
+        if (p?.payment_method === 'cash') return '💵';
+        if (p?.payment_method === 'card' && p?.booking_channel === 'online') return '🌐';
+        if (p?.payment_method === 'card') return '💳';
+        return '💳';
+      }
+      return '📎';
+    };
+
+    const formatAmount = (amount) => {
+      if (typeof amount !== 'number' || Number.isNaN(amount)) return null;
+      const rounded = Math.round(amount * 100) / 100;
+      const isWhole = Number.isInteger(rounded);
+      return `${isWhole ? rounded.toFixed(0) : rounded.toFixed(2)} lei`;
     };
 
     const drawRoundedRect = (context, x, y, width, height, radius = 12) => {
@@ -1186,17 +1205,38 @@ useEffect(() => {
 
       const activePassengers = (seat.passengers || []).filter((p) => !p.status || p.status === 'active');
       const primaryPassenger = activePassengers[0];
-      const seatDisplayLabel = isDriverSeat && driverName ? driverName : seat.label;
       const driverSubtitle = isDriverSeat && driverName ? 'Șofer' : null;
       let textY = y + seatPadding;
 
-      const writeLine = (text, font = lineFont) => {
+      const drawSeatLabel = () => {
+        if (!seat.label) return;
+        ctx.save();
+        ctx.font = seatLabelFont;
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(seat.label), x + seatWidth / 2, y + seatHeight / 2);
+        ctx.restore();
+      };
+
+      const writeLeft = (text, font = lineFont) => {
         if (!text) return;
         const value = clampText(String(text), font);
         ctx.font = font;
         ctx.fillStyle = seatTextColor;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
         ctx.fillText(value, x + seatPadding, textY);
-        textY += baseSeatTextSize + 4;
+      };
+
+      const writeRight = (text, font = lineFont) => {
+        if (!text) return;
+        const value = clampText(String(text), font);
+        ctx.font = font;
+        ctx.fillStyle = seatTextColor;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        ctx.fillText(value, x + seatWidth - seatPadding, textY);
       };
 
       const writeObservation = (text) => {
@@ -1204,52 +1244,69 @@ useEffect(() => {
         const lines = String(text).split(/\r?\n/);
         lines.forEach((line, idx) => {
           const prefix = idx === 0 ? '📝 ' : '   ';
-          writeLine(`${prefix}${line}`, smallFont);
+          writeRight(`${prefix}${line}`, smallFont);
+          textY += baseSeatTextSize + 4;
         });
       };
 
-      writeLine(seatDisplayLabel, nameFontPrimary);
-      if (driverSubtitle) {
-        writeLine(driverSubtitle, nameFontSecondary);
-      }
+      drawSeatLabel();
 
       if (primaryPassenger) {
-        writeLine(primaryPassenger.name || '(fără nume)', nameFontSecondary);
-        writeLine(primaryPassenger.phone, lineFont);
-        writeLine(`${primaryPassenger.board_at} → ${primaryPassenger.exit_at}`, lineFont);
-        writeObservation(primaryPassenger.observations);
+        const primaryIcon = getPaymentIcon(primaryPassenger);
+        ctx.font = paymentIconFont;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(primaryIcon, x + seatPadding, textY);
+        writeRight(primaryPassenger.name || '(fără nume)', nameFontSecondary);
+        textY += baseSeatTextSize + 4;
       }
 
-      if (activePassengers.length > 1) {
-        textY += 4;
-        activePassengers.slice(1).forEach((passenger) => {
-          writeLine(passenger.name, nameFontSecondary);
-          writeLine(passenger.phone, lineFont);
+      if (driverSubtitle) {
+        writeLeft(driverSubtitle, nameFontSecondary);
+        textY += baseSeatTextSize + 4;
+      }
+
+      if (activePassengers.length > 0) {
+        activePassengers.forEach((passenger, index) => {
+          if (index > 0) {
+            const icon = getPaymentIcon(passenger);
+            ctx.font = paymentIconFont;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText(icon, x + seatPadding, textY);
+            writeRight(passenger.name || '(fără nume)', nameFontSecondary);
+            textY += baseSeatTextSize + 4;
+          }
+
+          writeRight(passenger.phone, lineFont);
+          textY += baseSeatTextSize + 4;
+
+          const amountValue =
+            typeof passenger.amount === 'number' ? passenger.amount
+              : typeof passenger.price === 'number' ? passenger.price
+                : typeof passenger.price_value === 'number' ? passenger.price_value
+                  : typeof passenger.total_price === 'number' ? passenger.total_price
+                    : Number(passenger.amount ?? passenger.price ?? passenger.price_value ?? passenger.total_price);
+          const amountLabel = formatAmount(amountValue) || '-';
+
+          ctx.font = lineFont;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'top';
+          ctx.fillText(amountLabel, x + seatPadding, textY);
+
+          ctx.font = `italic ${baseSeatTextSize}px "Inter", sans-serif`;
+          ctx.textAlign = 'right';
+          ctx.fillText(
+            `${passenger.board_at} → ${passenger.exit_at}`,
+            x + seatWidth - seatPadding,
+            textY
+          );
+          textY += baseSeatTextSize + 4;
+
           writeObservation(passenger.observations);
         });
       }
 
-
-      const paidPassenger = activePassengers.find((p) => p?.payment_status === 'paid');
-      const paymentMethod = paidPassenger?.payment_method || primaryPassenger?.payment_method;
-      if (paymentMethod) {
-        const methodLabel = paymentMethod === 'cash' ? '💵 Cash' : paymentMethod === 'card' ? '💳 Card' : '📝 Rezervare';
-        ctx.font = '600 11px "Inter", sans-serif';
-        const badgeWidth = ctx.measureText(methodLabel).width + 16;
-        const badgeHeight = 20;
-        const badgeX = x + seatWidth - badgeWidth - seatPadding;
-        const badgeY = y + seatHeight - badgeHeight - seatPadding;
-        const badgeColor = paymentMethod === 'cash' ? '#eab308' : paymentMethod === 'card' ? '#7c3aed' : '#6b7280';
-        drawRoundedRect(ctx, badgeX, badgeY, badgeWidth, badgeHeight, 10);
-        ctx.fillStyle = badgeColor;
-        ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(methodLabel, badgeX + badgeWidth / 2, badgeY + badgeHeight / 2 + 1);
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-      }
 
       if (heldByOther) {
         ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -6020,4 +6077,3 @@ useEffect(() => {
     </div>
   );
 }
-
