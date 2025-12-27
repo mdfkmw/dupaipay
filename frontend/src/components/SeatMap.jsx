@@ -129,15 +129,19 @@ const SeatMap = forwardRef(function SeatMap({
         );
 
 
-        const getPassengerIcon = (p) => {
-  if (p?.payment_status === 'paid') {
-    if (p?.payment_method === 'cash') return '💵';
-    if (p?.payment_method === 'card' && p?.booking_channel === 'online') return '🌐';
-    if (p?.payment_method === 'card') return '💳';
-    return '💳';
-  }
-  return '📎';
-};
+        const getPaymentIcon = (p) => {
+          if (p?.payment_method === 'cash') return '💵';
+          if (p?.payment_method === 'card' && p?.booking_channel === 'online') return '🌐';
+          if (p?.payment_method === 'card') return '💳';
+          return null;
+        };
+
+        const formatAmount = (amount) => {
+          if (typeof amount !== 'number' || Number.isNaN(amount)) return null;
+          const rounded = Math.round(amount * 100) / 100;
+          const isWhole = Number.isInteger(rounded);
+          return `${isWhole ? rounded.toFixed(0) : rounded.toFixed(2)} lei`;
+        };
 
 
 
@@ -200,8 +204,8 @@ const SeatMap = forwardRef(function SeatMap({
             <div className="flex justify-between items-start font-semibold text-[13px] leading-tight mb-1">
               <span className="truncate">{seatTitle}</span>
               {activePassengers.length > 0 && (
-                <span className="text-[11px] px-2 py-1 rounded bg-white/20 text-right">
-                  {activePassengers.length} pas.
+                <span className="text-[11px] px-2 py-1 rounded bg-white/20 text-right truncate max-w-[60%]">
+                  {activePassengers[0]?.name || '(fără nume)'}
                 </span>
               )}
             </div>
@@ -216,24 +220,39 @@ const SeatMap = forwardRef(function SeatMap({
               <div className="flex flex-col items-end text-right gap-1 text-[11px] leading-tight">
                 {activePassengers.map((p, i) => (
                   <div key={i} className="w-full">
-<div className="flex items-start justify-between gap-2">
-  <div className="w-5 text-left text-base leading-none">
-    {getPassengerIcon(p)}
-  </div>
-
-  <div
-    className="font-semibold text-[12px] leading-tight truncate flex-1 text-right"
-    style={passengerNameStyle}
-  >
-    {p.name || '(fără nume)'}
-  </div>
-</div>
+                    <div
+                      className="font-semibold text-[12px] leading-tight truncate text-right"
+                      style={passengerNameStyle}
+                    >
+                      {p.name || '(fără nume)'}
+                    </div>
 
                     <div style={passengerLineStyle}>
                       {p.phone}
                     </div>
-                    <div className="italic" style={passengerLineStyle}>
-                      {p.board_at} → {p.exit_at}
+                    <div className="flex items-center justify-between gap-2 italic" style={passengerLineStyle}>
+                      <div className="flex items-center gap-1 text-left not-italic">
+                        {(() => {
+                          const icon = getPaymentIcon(p);
+                          const amountValue =
+                            typeof p.amount === 'number' ? p.amount :
+                              typeof p.price === 'number' ? p.price :
+                                typeof p.price_value === 'number' ? p.price_value :
+                                  typeof p.total_price === 'number' ? p.total_price :
+                                    Number(p.amount ?? p.price ?? p.price_value ?? p.total_price);
+                          const amountLabel = formatAmount(amountValue);
+                          if (!icon && !amountLabel) return null;
+                          return (
+                            <>
+                              {icon && <span className="text-base leading-none">{icon}</span>}
+                              {amountLabel && <span>{amountLabel}</span>}
+                            </>
+                          );
+                        })()}
+                      </div>
+                      <span className="truncate text-right italic">
+                        {p.board_at} → {p.exit_at}
+                      </span>
                     </div>
                     {showObservations && p.observations && (
                       <div
