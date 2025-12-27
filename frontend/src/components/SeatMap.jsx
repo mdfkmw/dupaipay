@@ -140,8 +140,10 @@ const SeatMap = forwardRef(function SeatMap({
         };
 
         const formatAmountLabel = (amount) => {
-          if (typeof amount !== 'number' || Number.isNaN(amount)) return '';
-          const value = amount % 1 === 0 ? amount.toFixed(0) : amount.toFixed(2);
+          if (amount == null || amount === '') return '';
+          const numericAmount = typeof amount === 'number' ? amount : Number.parseFloat(amount);
+          if (Number.isNaN(numericAmount)) return '';
+          const value = numericAmount % 1 === 0 ? numericAmount.toFixed(0) : numericAmount.toFixed(2);
           return `${value} lei`;
         };
 
