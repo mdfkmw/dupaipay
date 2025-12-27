@@ -14,6 +14,7 @@ import AdminCallLog from './pages/AdminCallLog';
 import ReservationDetails from './components/ReservationDetails.jsx';
 import AgentChatPopup from './components/AgentChatPopup.jsx';
 import InviteAcceptPage from './pages/InviteAcceptPage';
+import SeatMapDemo from './pages/SeatMapDemo.jsx';
 
 //const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 //const API_URL = '';
@@ -284,6 +285,7 @@ useEffect(() => {
           }
         />
         <Route path="/rezervare/:id" element={<ReservationDetails />} />
+        <Route path="/seatmap-demo" element={<SeatMapDemo />} />
       </Routes>
     </Router>
   );

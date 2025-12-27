@@ -66,6 +66,28 @@ const SeatMap = forwardRef(function SeatMap({
     color: seatTextColor,
   };
 
+  const getPassengerSummary = (passengers) => {
+    if (!passengers.length) return '';
+    const firstName = passengers[0]?.name || '(fără nume)';
+    return passengers.length === 1 ? firstName : `${firstName} +${passengers.length - 1}`;
+  };
+
+  const getPaymentAmountLabel = (p) => {
+    const paidAmount = Number(p?.paid_amount);
+    const priceValue = Number(p?.price_value);
+    const hasPaidAmount = Number.isFinite(paidAmount);
+    const hasPriceValue = Number.isFinite(priceValue);
+    if (p?.payment_status === 'paid') {
+      const amount = hasPaidAmount ? paidAmount : hasPriceValue ? priceValue : null;
+      return amount == null ? 'Plătit' : `${amount.toFixed(2)} lei`;
+    }
+    if (hasPriceValue) {
+      const due = Math.max(priceValue - (hasPaidAmount ? paidAmount : 0), 0);
+      return `De plată ${due.toFixed(2)} lei`;
+    }
+    return 'De plată';
+  };
+
 
 
 
@@ -201,7 +223,7 @@ const SeatMap = forwardRef(function SeatMap({
               <span className="truncate">{seatTitle}</span>
               {activePassengers.length > 0 && (
                 <span className="text-[11px] px-2 py-1 rounded bg-white/20 text-right">
-                  {activePassengers.length} pas.
+                  {getPassengerSummary(activePassengers)}
                 </span>
               )}
             </div>
@@ -213,27 +235,29 @@ const SeatMap = forwardRef(function SeatMap({
             )}
 
             {activePassengers.length > 0 && (
-              <div className="flex flex-col items-end text-right gap-1 text-[11px] leading-tight">
+              <div className="flex flex-col items-stretch gap-1 text-[11px] leading-tight">
                 {activePassengers.map((p, i) => (
                   <div key={i} className="w-full">
-<div className="flex items-start justify-between gap-2">
-  <div className="w-5 text-left text-base leading-none">
-    {getPassengerIcon(p)}
-  </div>
+                    <div
+                      className="font-semibold text-[12px] leading-tight truncate text-right"
+                      style={passengerNameStyle}
+                    >
+                      {p.name || '(fără nume)'}
+                    </div>
 
-  <div
-    className="font-semibold text-[12px] leading-tight truncate flex-1 text-right"
-    style={passengerNameStyle}
-  >
-    {p.name || '(fără nume)'}
-  </div>
-</div>
-
-                    <div style={passengerLineStyle}>
+                    <div className="text-right" style={passengerLineStyle}>
                       {p.phone}
                     </div>
-                    <div className="italic" style={passengerLineStyle}>
-                      {p.board_at} → {p.exit_at}
+                    <div className="flex items-center justify-between gap-2 italic" style={passengerLineStyle}>
+                      <div className="flex items-center gap-1 text-left not-italic">
+                        <span className="text-base leading-none">{getPassengerIcon(p)}</span>
+                        <span className="text-[10px] leading-none">
+                          {getPaymentAmountLabel(p)}
+                        </span>
+                      </div>
+                      <span className="text-right">
+                        {p.board_at} → {p.exit_at}
+                      </span>
                     </div>
                     {showObservations && p.observations && (
                       <div
