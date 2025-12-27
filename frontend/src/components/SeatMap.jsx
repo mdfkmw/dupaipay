@@ -223,11 +223,7 @@ const SeatMap = forwardRef(function SeatMap({
             {activePassengers.length > 0 && (
               <div className="flex flex-col items-end text-right text-[11px] leading-tight">
                 {activePassengers.map((p, i) => {
-                  const amountValue =
-                    p?.payment_status === 'paid'
-                      ? (p?.paid_amount ?? p?.price_value)
-                      : p?.price_value;
-                  const amountLabel = formatAmountLabel(amountValue);
+                  const amountLabel = formatAmountLabel(p?.amount);
                   const paymentLabel = [getPassengerIcon(p), amountLabel].filter(Boolean).join(' ');
                   return (
                   <div key={i} className="w-full">
